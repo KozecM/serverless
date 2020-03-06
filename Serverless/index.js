@@ -22,14 +22,14 @@ app.get('/', function (req, res) {
 
 // Get User endpoint
 app.post('/save-user',  (req, res) => {
-  UID = req.query.id;
+  var id = req.query.id;
   var name = req.query.name;
   var email = req.query.email;
 
   var params = {
     TableName: USERS_TABLE,
     Item: {
-      Primary: UID,
+      Primary: id,
       name: name,
       Sort: email
     },
@@ -46,13 +46,16 @@ app.post('/save-user',  (req, res) => {
   });
 })
 
-app.post('user/playlist', (req, res) => {
-  var songid = req.query.songid;
+app.post('/user/playlist', (req, res) => {
+  var songid = req.query.song;
+  var id = req.query.id;
+  var name = req.query.name;
 
   var params = {
     Item: {
-      Primary: UID,
+      Primary: id,
       Sort: songid,
+      name: name,
       playlist: "playlist"
     },
     TableName: USERS_TABLE
@@ -67,25 +70,28 @@ app.post('user/playlist', (req, res) => {
   });
 })
 
-app.get('user/playlist', (req,res) => {
-  var result = []
+app.get('/user/playlist', (req,res) => {
+  var id = req.query.id;
+
+  var result = [];
+  
   var params = {
     TableName: USERS_TABLE,
     FilterExpression: 'Primary = :uid and playlist = :play',
     ExpressionAttributeValues: {
-      ':uid': UID,
+      ':uid': id,
       ':play': "playlist"
     }
   };
 
-  dynamoDb.scan(params, function (err, data) {
+  dynamoDb.query(params, function (err, data) {
     if (err) console.log(err);
     else{
       data.Items.forEach((i) => {
-        result.push(i.SortKey);
+        result.push(i);
       });
       // console.log("result: ", result);
-      return result;
+      res(result);
     } 
   });
 })

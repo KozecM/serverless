@@ -47,20 +47,18 @@ functions:
           path: /save-user
           method: post
           cors: true
-  addPlaylist:
+  Playlist:
     handler: index.handler
     events:
       - http:
           path: /user/playlist
           method: post
           cors: true
-  getPlaylist:
-    handler: index.handler
-    events:
       - http:
           path: /user/playlist
           method: get
           cors: true
+      
 
 resources:
   Resources:
