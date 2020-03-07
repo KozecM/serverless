@@ -8,9 +8,10 @@ const app = express()
 const AWS = require('aws-sdk');
 
 
-const USERS_TABLE = "SLSUsers";
+const USERS_TABLE = "Users";
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
-const UID = '';
+const sqs = new AWS.SQS();
+const SQS_URL = "https://sqs.us-east-1.amazonaws.com/383829852699/reporting.fifo"
 
 app.use(cors());
 
@@ -29,9 +30,9 @@ app.post('/save-user',  (req, res) => {
   var params = {
     TableName: USERS_TABLE,
     Item: {
-      Primary: id,
+      Prime: email,
       name: name,
-      Sort: email
+      Sort: id
     },
   }
 
@@ -53,7 +54,7 @@ app.post('/user/playlist', (req, res) => {
 
   var params = {
     Item: {
-      Primary: id,
+      Prime: id,
       Sort: songid,
       name: name,
       playlist: "playlist"
@@ -72,29 +73,67 @@ app.post('/user/playlist', (req, res) => {
 
 app.get('/user/playlist', (req,res) => {
   var id = req.query.id;
-
   var result = [];
   
   var params = {
     TableName: USERS_TABLE,
-    FilterExpression: 'Primary = :uid and playlist = :play',
+    KeyConditionExpression: "Prime = :v1",
     ExpressionAttributeValues: {
-      ':uid': id,
-      ':play': "playlist"
+      ':v1': id,  
     }
   };
 
-  dynamoDb.query(params, function (err, data) {
-    if (err) console.log(err);
-    else{
-      data.Items.forEach((i) => {
-        result.push(i);
-      });
-      // console.log("result: ", result);
-      res(result);
-    } 
+  dynamoDb.query(params).promise().then(function ( data) {
+    data.Items.forEach((i) => {
+      result.push(i);
+    });
+    // console.log("result: ", result);
+    res.status(201).send(result);
+  }).catch((error) => {
+    res.status(401).send(error);
   });
 })
 
+
+app.post('/play', (req,res) => {
+  var song = req.query.song;
+  var album = req.query.album;
+  var artist = req.query.artist;
+  const date = Date.now() + "";
+  const message = song + " was just played! Pay "+ artist + " now!"
+
+  var params = {
+    MessageAttributes: {
+      "Artist": {
+        DataType: "String",
+        StringValue: artist
+      },
+      "Album": {
+        DataType: "String",
+        StringValue: album
+      },
+      "Song": {
+        DataType: "String",
+        StringValue: song
+      },
+    },
+    MessageBody: message,
+    MessageDeduplicationId: date,
+    MessageGroupId: "Group1",
+    QueueUrl: SQS_URL
+  }
+
+  sqs.sendMessage(params, function(err, data) {
+    if (err) {
+      console.log("Error", err);
+      res.status(400).send("ERROR: " + err);
+    } else {
+      console.log("Success", data.MessageId);
+      res.status(200).send("Success!: " + data.MessageId);
+    }
+  })
+
+  console.log(artist);
+})
 
 module.exports.handler = serverless(app);

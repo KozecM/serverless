@@ -10,7 +10,7 @@ service: my-express-app
 # frameworkVersion: "=X.X.X"
 
 custom:
-  tableName: 'SLSUsers'
+  tableName: 'Users'
 
 provider:
   name: aws
@@ -58,7 +58,17 @@ functions:
           path: /user/playlist
           method: get
           cors: true
-      
+  Reporting:
+    handler: index.handler
+    events:
+      - http:
+          path: /play
+          method: post
+          cors: true
+  Subscriber:
+    handler: subscribe.handler
+    events:
+      - sqs: arn:aws:sqs:us-east-1:383829852699:reporting.fifo
 
 resources:
   Resources:
@@ -66,12 +76,12 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: Primary
+          - AttributeName: Prime
             AttributeType: S
           - AttributeName: Sort
             AttributeType: S
         KeySchema:
-          - AttributeName: Primary
+          - AttributeName: Prime
             KeyType: HASH
           - AttributeName: Sort
             KeyType: RANGE
